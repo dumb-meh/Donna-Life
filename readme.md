@@ -33,6 +33,7 @@ Deployment: Docker
 
 ## Project Structure
 
+```
 Donna Life/
 ├── app/
 │   ├── services/
@@ -46,15 +47,19 @@ Donna Life/
 ├── Dockerfile                   # Docker container setup
 ├── main.py                      # FastAPI application entry point
 └── requirements.txt             # Python dependencies
-Setup and Installation
-Prerequisites
+
+```
+
+## Setup and Installation
+
+### Prerequisites
 Python 3.9+
 
 Docker
 
 OpenAI API key
 
-## Installation
+### Installation
 Clone the repository:
 
 bash
@@ -76,7 +81,7 @@ bash
 uvicorn main:app --host 0.0.0.0 --port 8029
 
 
-## API Endpoints
+### API Endpoints
 Voice Assistant
 POST /voice-assistant/process: Process audio file to create task
 
