@@ -19,30 +19,44 @@ class VoiceAssistantService:
     
     async def process_voice_and_text(
         self, 
-        transcribed_text: str
+        transcribed_text: str,
+        date_time: str
     ) -> Dict[str, Any]:
         """
         Process transcribed audio to create a task JSON
         
         Args:
             transcribed_text: Text from speech-to-text conversion
+            date_time: Current date and time in ISO format (e.g., "2025-07-24T14:18:36.514Z")
             
         Returns:
             Dictionary containing task information
         """
         try:
-            # Get current date information
-            today = datetime.now()
-            tomorrow = today + timedelta(days=1)
+            # Parse the input date_time to get today and tomorrow
+            current_date = datetime.fromisoformat(date_time.replace('Z', '+00:00'))
+            tomorrow_date = current_date + timedelta(days=1)
             
             # Create prompt for OpenAI to extract task information
             prompt = f"""
-            YOU MUST BE PREPARED FOR MULTILINGUAL INPUTS. NO MATTER THE LANGUAGE, YOU MUST EXTRACT TASK INFORMATION FROM THE TEXT.
+            YOU MUST BE PREPARED FOR MULTILINGUAL INPUTS. Your task has two steps:
+
+            STEP 1: FIX ANY TRANSCRIPTION ERRORS IN THE INPUT TEXT
+            - Keep the same language as the input
+            - Fix any obvious transcription errors (especially with numbers, dates, times)
+            - Maintain the original meaning and intent
+            - If text mentions time (like 2:00 or 14:00), ensure it's properly formatted
+            - Fix any word spacing issues
+            - DO NOT translate to another language
+            - If the text is already correct, use it as is
+
+            STEP 2: EXTRACT TASK INFORMATION FROM THE CORRECTED TEXT
             THE OUTPUT JSON STRUCTURE AND FIELD NAMES WILL BE IN ENGLISH, BUT THE VALUES FOR 'title' AND 'description' MUST BE IN THE SAME LANGUAGE AS THE INPUT TEXT.
             ALL OTHER FIELD VALUES (priority, date, time, category, tags) SHOULD BE IN ENGLISH.DON'T USE TOMORROW, TODAY, NEXT WEEK, etc. IN THE TITLE OR DESCRIPTION.
             
-            Today's date is: {today.strftime('%Y-%m-%d')} ({today.strftime('%A, %B %d, %Y')})
-            Tomorrow's date is: {tomorrow.strftime('%Y-%m-%d')} ({tomorrow.strftime('%A, %B %d, %Y')})
+            Current date and time: {date_time}
+            Today's date: {current_date.strftime('%Y-%m-%d')} ({current_date.strftime('%A, %B %d, %Y')})
+            Tomorrow's date: {tomorrow_date.strftime('%Y-%m-%d')} ({tomorrow_date.strftime('%A, %B %d, %Y')})
             
             Analyze the following text and extract task information to create a structured task JSON.
             The text might contain a task request, reminder, or action item.
@@ -54,8 +68,8 @@ class VoiceAssistantService:
             - description: Detailed description of what needs to be done (IN THE SAME LANGUAGE AS INPUT) NOTE: DON'T USE TOMORROW, TODAY, NEXT WEEK, etc. IN THE DESCRIPTION
             - priority: Determine if this is "high", "medium", or "low" priority based on urgency keywords (IN ENGLISH)
             - date: Extract any date mentions and convert to YYYY-MM-DD format. Common phrases:
-              * "tomorrow" = {tomorrow.strftime('%Y-%m-%d')}
-              * "today" = {today.strftime('%Y-%m-%d')}
+              * "tomorrow" = {tomorrow_date.strftime('%Y-%m-%d')}
+              * "today" = {current_date.strftime('%Y-%m-%d')}
               * "next week" = approximate to 7 days from today
               * If no date mentioned, leave as null
             - time: Extract any time mentions in HH:MM format (24 hr), if applicable. If no time mentioned, leave it as "00:00", MUST NOT SEND MORNING,EVENING, AFTERNOON, NIGHT, etc.
@@ -65,8 +79,8 @@ class VoiceAssistantService:
             Respond with a JSON object only, no additional text.
             Example format for Multilingual input:
             {{
-                "title": "কালকে সকাল ১০ টায় মিটিং",
-                "description": "কালকে সকাল ১০ টায় প্রজেক্ট ম্যানেজারের সাথে মিটিং আছে",
+                "title":  সকাল ১০ টায় মিটিং",
+                "description": "সকাল ১০ টায় প্রজেক্ট ম্যানেজারের সাথে মিটিং আছে",
                 "priority": "medium",
                 "date": "2025-07-24",
                 "time": "10:00",

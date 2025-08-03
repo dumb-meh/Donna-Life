@@ -20,10 +20,10 @@ async def chat_with_text(request: ChatTextRequest):
     Chat using text message with optional task context
     """
     try:
-        # Process chat message with task context and timezone
+        # Process chat message with task context
         result = await chat_service.process_chat_message(
             message=request.message,
-            time_zone=request.time_zone,
+            date_time=request.date_time,
             task_context=request.task_context
         )
         
@@ -36,15 +36,15 @@ async def chat_with_text(request: ChatTextRequest):
 async def chat_with_voice(
     audio_file: UploadFile = File(...),
     task_context: Optional[str] = Form(None),
-    time_zone: Optional[str] = Form(None)
+    date_time: str = Form(...)
 ):
     """
-    Chat using voice message with optional task context and timezone
+    Chat using voice message with optional task context
     
     This endpoint:
     1. Validates and converts uploaded audio file to optimal format (MP3/WAV)
     2. Converts processed audio file to text using Whisper
-    3. Processes the transcribed text as a chat message with task context and timezone
+    3. Processes the transcribed text as a chat message with task context
     4. Returns AI response
     
     Supports various audio formats: MP3, WAV, FLAC, AAC, OGG, M4A, WMA, MP4, AVI, MOV, MKV, WebM, 3GP, AMR
@@ -110,10 +110,10 @@ async def chat_with_voice(
                     detail="Invalid JSON format in task_context"
                 )
         
-        # Step 4: Process chat message with task context and timezone
+        # Step 4: Process chat message with task context
         result = await chat_service.process_chat_message(
             message=transcribed_text,
-            time_zone=time_zone or "+00:00",
+            date_time=date_time,
             task_context=parsed_task_context
         )
         

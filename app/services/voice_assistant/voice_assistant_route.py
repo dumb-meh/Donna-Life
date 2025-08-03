@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, UploadFile, File
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form
 from fastapi.responses import JSONResponse
 from .voice_assistant import VoiceAssistantService
 from .voice_assistant_schema import VoiceAssistantRequest, VoiceAssistantResponse, TaskItem, TextRequest
@@ -10,6 +10,7 @@ speech_to_text_service = SpeechToTextService()
 
 @router.post("/process", response_model=VoiceAssistantResponse)
 async def process_voice_assistant_request(
+    date_time: str = Form(...),
     audio_file: UploadFile = File(...)
 ):
     """
@@ -17,20 +18,20 @@ async def process_voice_assistant_request(
     
     This endpoint:
     1. Converts uploaded audio file to text using Whisper (auto-detects language)
-    2. Processes the transcribed text using Gemini
+    2. Processes the transcribed text using OpenAI
     3. Returns a structured task JSON
     """
     try:
+        # Create request object
+        request = VoiceAssistantRequest(date_time=date_time)
+        
         # Validate that file is provided
         if not audio_file.filename:
             raise HTTPException(
                 status_code=400, 
                 detail="No audio file provided"
             )
-        
-        # Accept any file type - we'll convert it to MP4 in the service
-        # Common audio formats: mp3, wav, m4a, flac, ogg, aac, wma, etc.
-        
+            
         # Read audio file content
         audio_content = await audio_file.read()
         
@@ -50,7 +51,8 @@ async def process_voice_assistant_request(
         
         # Step 2: Process transcribed text with Gemini to create task
         assistant_result = await voice_assistant_service.process_voice_and_text(
-            transcribed_text=transcribed_text
+            transcribed_text=transcribed_text,
+            date_time=request.date_time
         )
         
         # Step 3: Create response

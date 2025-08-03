@@ -338,28 +338,23 @@ class ChatService:
     async def process_chat_message(
         self, 
         message: str, 
-        time_zone: str,
-        task_context: Optional[Union[Dict[str, Any], List[Dict[str, Any]]]] = None
+        task_context: Optional[Union[Dict[str, Any], List[Dict[str, Any]]]] = None,
+        date_time: str = None
     ) -> Dict[str, Any]:
         """
         Process chat message with optional task context using OpenAI GPT
         
         Args:
             message: User's chat message
-            time_zone: User's timezone (e.g., "+05:30", "-08:00", "+00:00")
             task_context: Optional task context JSON (single dict or list of dicts)
+            date_time: Current date and time in ISO format (e.g., "2025-07-24T14:18:36.514Z")
             
         Returns:
             Dictionary with response and success status
         """
         try:
-            # Build the system prompt with filtered task context if provided
-            current_datetime = datetime.now()
-            
             system_prompt = f"""You are a helpful AI assistant with task management capabilities.
-Current date and time (GMT): {current_datetime.strftime("%Y-%m-%d %H:%M:%S")} ({current_datetime.strftime("%A, %B %d, %Y at %H:%M")})
-User's timezone: GMT{time_zone}
-Note: Convert all times to the user's timezone (GMT{time_zone}) when displaying times or dates to the user.
+Current date and time: {date_time}
 
 You help users manage their tasks and answer questions about their schedule, priorities, and workload.
 
@@ -379,15 +374,13 @@ You have access to the following relevant tasks:
 Use this task information to provide relevant and contextual responses. You can reference specific tasks, help with scheduling, provide reminders, or answer questions related to the tasks. Focus on the most relevant information for the user's query.
 
 Guidelines:
-- All times in the system are in GMT. Convert to user's timezone when displaying to user.
 - The date field in tasks means the date when the task should be done
-- The time field in tasks is in 24-hour format (GMT)
+- The time field in tasks is in 24-hour format
 - Be concise and helpful
 - Reference specific tasks when relevant
 - Provide actionable insights
 - Help prioritize and organize tasks
 - Suggest time management strategies when appropriate
-- When showing times to the user, convert from GMT to their timezone (GMT{time_zone})
 - IMPORTANT: Always respond in the following JSON format:
 
 {{"response": "Your helpful response here", "user_msg": "The corrected user message (fix any errors or keep as-is)"}}
@@ -401,7 +394,7 @@ Example response:
 No tasks match your current query, but I'm here to help with general questions and task management advice.
 
 IMPORTANT: Always respond in the following JSON format:
-{"response": "Your helpful response here", "user_msg": "The corrected user message (fix any errors or keep as-is)"}
+{"response": "Your helpful response here"}
 """
             
             # Get response from OpenAI

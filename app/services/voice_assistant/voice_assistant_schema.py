@@ -1,8 +1,14 @@
 from pydantic import BaseModel, Field
 from typing import Optional, Dict, Any, List
+from fastapi import Form, UploadFile, File
 
 class VoiceAssistantRequest(BaseModel):
-    pass  # No fields needed since we only accept file upload
+    date_time: str
+    
+    @classmethod
+    def as_form(cls, date_time: str = Form(...)):
+        return cls(date_time=date_time)
+
     
 class TextRequest(BaseModel):
     text: str 
