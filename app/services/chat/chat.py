@@ -10,26 +10,22 @@ import tempfile
 from pydub import AudioSegment
 from pydub.utils import which
 
-# Load environment variables
 load_dotenv()
 
-# Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class ChatService:
     def __init__(self):
-        # Configure OpenAI API
         self.client = openai.OpenAI(
             api_key=os.getenv("OPENAI_API_KEY")
         )
-        
-        # Supported audio formats for conversion
+
         self.supported_input_formats = [
             '.mp3', '.wav', '.flac', '.aac', '.ogg', '.m4a', '.wma', 
             '.mp4', '.avi', '.mov', '.mkv', '.webm', '.3gp', '.amr'
         ]
-        self.preferred_output_format = 'mp3'  # Efficient and widely supported
+        self.preferred_output_format = 'mp3'  
     
     def _ensure_ffmpeg_available(self) -> bool:
         """Check if FFmpeg is available for audio processing"""
@@ -50,23 +46,17 @@ class ChatService:
             Path to converted file or None if conversion failed
         """
         try:
-            # Load audio file
             audio = AudioSegment.from_file(input_file_path)
             
-            # Optimize audio settings for speech recognition
-            # Convert to mono (single channel) for better speech recognition
             if audio.channels > 1:
                 audio = audio.set_channels(1)
             
-            # Ensure sample rate is appropriate (16kHz is optimal for speech)
             if audio.frame_rate != 16000:
                 audio = audio.set_frame_rate(16000)
             
-            # Create output file path
             base_name = os.path.splitext(input_file_path)[0]
             output_file_path = f"{base_name}_converted.{output_format}"
             
-            # Export with optimized settings
             if output_format == 'mp3':
                 audio.export(output_file_path, format="mp3", bitrate="64k")
             elif output_format == 'wav':
@@ -93,10 +83,8 @@ class ChatService:
             Tuple of (converted_file_content, conversion_message)
         """
         try:
-            # Get file extension
             file_ext = os.path.splitext(filename)[1].lower()
             
-            # Create temporary file for original audio
             with tempfile.NamedTemporaryFile(suffix=file_ext, delete=False) as temp_file:
                 temp_file.write(file_content)
                 temp_file_path = temp_file.name
@@ -104,19 +92,14 @@ class ChatService:
             conversion_message = f"Original format: {file_ext}"
             
             try:
-                # Check if format conversion is needed
                 if file_ext not in ['.mp3', '.wav', '.flac', '.m4a', '.ogg']:
                     logger.info(f"Converting unsupported format {file_ext} to {self.preferred_output_format}")
                     
-                    # Convert to preferred format
                     converted_path = self._convert_audio_format(temp_file_path, self.preferred_output_format)
                     
                     if converted_path and os.path.exists(converted_path):
-                        # Read converted file
                         with open(converted_path, 'rb') as converted_file:
                             converted_content = converted_file.read()
-                        
-                        # Clean up converted file
                         os.unlink(converted_path)
                         
                         conversion_message = f"Converted from {file_ext} to {self.preferred_output_format}"
@@ -127,7 +110,6 @@ class ChatService:
                         return file_content, conversion_message
                 
                 else:
-                    # File is already in a good format, but let's optimize it
                     optimized_path = self._convert_audio_format(temp_file_path, 'mp3')
                     
                     if optimized_path and os.path.exists(optimized_path):
@@ -143,7 +125,6 @@ class ChatService:
                         return file_content, conversion_message
                         
             finally:
-                # Clean up original temporary file
                 if os.path.exists(temp_file_path):
                     os.unlink(temp_file_path)
                     
@@ -164,7 +145,6 @@ class ChatService:
         """Parse date from natural language text"""
         current_date = datetime.now().strftime("%Y-%m-%d")
         
-        # Common date patterns
         text_lower = text.lower()
         
         if "today" in text_lower:
@@ -176,8 +156,6 @@ class ChatService:
         elif "next month" in text_lower:
             return (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
         
-        # Try to extract specific date formats
-        # Pattern for DD/MM/YYYY
         date_pattern = r"(\d{1,2})/(\d{1,2})/(\d{4})"
         match = re.search(date_pattern, text)
         if match:
@@ -188,7 +166,6 @@ class ChatService:
             except ValueError:
                 pass
         
-        # Default to today if no date found
         return current_date
     
     def filter_tasks_by_relevance(self, tasks: List[Dict[str, Any]], user_message: str) -> List[Dict[str, Any]]:
@@ -199,7 +176,6 @@ class ChatService:
         message_lower = user_message.lower()
         filtered_tasks = []
         
-        # Date-based filtering - support both 'date' and 'due_date' fields
         def get_task_date(task):
             return task.get("date") or task.get("due_date")
         
@@ -217,7 +193,6 @@ class ChatService:
             filtered_tasks = [task for task in tasks if get_task_date(task) and start_date <= get_task_date(task) <= end_date]
         
         elif any(keyword in message_lower for keyword in ["this week", "week"]):
-            # Current week
             today = datetime.now()
             start_of_week = today - timedelta(days=today.weekday())
             end_of_week = start_of_week + timedelta(days=6)
@@ -225,14 +200,12 @@ class ChatService:
             end_date = end_of_week.strftime("%Y-%m-%d")
             filtered_tasks = [task for task in tasks if get_task_date(task) and start_date <= get_task_date(task) <= end_date]
         
-        # Priority-based filtering
         elif any(keyword in message_lower for keyword in ["urgent", "high priority", "important"]):
             filtered_tasks = [task for task in tasks if task.get("priority") == "high"]
         
         elif any(keyword in message_lower for keyword in ["low priority", "least important"]):
             filtered_tasks = [task for task in tasks if task.get("priority") == "low"]
         
-        # Status-based filtering
         elif any(keyword in message_lower for keyword in ["pending", "not started", "todo"]):
             filtered_tasks = [task for task in tasks if task.get("status") == "pending"]
         
@@ -242,21 +215,18 @@ class ChatService:
         elif any(keyword in message_lower for keyword in ["completed", "done", "finished"]):
             filtered_tasks = [task for task in tasks if task.get("status") == "completed"]
         
-        # Overdue tasks - support both 'date' and 'due_date' fields
         elif any(keyword in message_lower for keyword in ["overdue", "late", "past due"]):
             today = datetime.now().strftime("%Y-%m-%d")
             filtered_tasks = [task for task in tasks if get_task_date(task) and get_task_date(task) < today and task.get("status") != "completed"]
         
-        # Keyword-based filtering (search in title and description)
         elif any(keyword in message_lower for keyword in ["about", "regarding", "related to"]):
-            # Extract potential keywords after these phrases
+            
             keywords = []
             for phrase in ["about", "regarding", "related to"]:
                 if phrase in message_lower:
                     start_idx = message_lower.find(phrase) + len(phrase)
                     remaining_text = message_lower[start_idx:].strip()
-                    # Take the next few words as potential keywords
-                    potential_keywords = remaining_text.split()[:3]  # Take up to 3 words
+                    potential_keywords = remaining_text.split()[:3]  
                     keywords.extend(potential_keywords)
             
             if keywords:
@@ -267,18 +237,15 @@ class ChatService:
                     if any(keyword in title or keyword in description for keyword in keywords):
                         filtered_tasks.append(task)
         
-        # If no specific filters applied, use smart defaults
         if not filtered_tasks:
-            # If user asks about schedule, meetings, or tasks, show relevant tasks
             if any(keyword in message_lower for keyword in ["schedule", "agenda", "calendar", "tasks", "what do i have", "meeting", "meetings", "appointments"]):
-                # For meeting-related queries, show a broader range including recent past and future
+
                 if any(keyword in message_lower for keyword in ["meeting", "meetings", "appointment", "appointments"]):
-                    # Show meetings from yesterday to next week
+
                     yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
                     end_date = (datetime.now() + timedelta(days=7)).strftime("%Y-%m-%d")
                     filtered_tasks = [task for task in tasks if get_task_date(task) and yesterday <= get_task_date(task) <= end_date]
-                    
-                    # Filter for meeting-related tasks
+
                     meeting_keywords = ["meeting", "conference", "call", "appointment", "attendance", "conferencia"]
                     meeting_tasks = []
                     for task in filtered_tasks:
@@ -290,18 +257,15 @@ class ChatService:
                     if meeting_tasks:
                         filtered_tasks = meeting_tasks
                 else:
-                    # For general schedule queries, show upcoming tasks (next 7 days)
                     start_date = datetime.now().strftime("%Y-%m-%d")
                     end_date = (datetime.now() + timedelta(days=7)).strftime("%Y-%m-%d")
                     filtered_tasks = [task for task in tasks if get_task_date(task) and start_date <= get_task_date(task) <= end_date]
                 
-                # Limit to most relevant tasks (high priority first, then by due date)
                 filtered_tasks = sorted(filtered_tasks, key=lambda x: (
                     0 if x.get("priority") == "high" else 1 if x.get("priority") == "medium" else 2,
                     get_task_date(x) or "9999-12-31"
-                ))[:10]  # Limit to 10 most relevant tasks
+                ))[:10]  
             
-            # For general questions, provide a small context of today's and tomorrow's tasks
             else:
                 today = datetime.now().strftime("%Y-%m-%d")
                 tomorrow = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
@@ -310,10 +274,9 @@ class ChatService:
                 tomorrow_tasks = [task for task in tasks if get_task_date(task) == tomorrow][:3]
                 
                 filtered_tasks = today_tasks + tomorrow_tasks
-        
-        # Ensure we don't send too many tasks (limit to 15 for performance)
+
         if len(filtered_tasks) > 15:
-            # Prioritize by due date and priority - support both date fields
+            
             filtered_tasks = sorted(filtered_tasks, key=lambda x: (
                 get_task_date(x) or "9999-12-31",
                 0 if x.get("priority") == "high" else 1 if x.get("priority") == "medium" else 2
@@ -324,13 +287,12 @@ class ChatService:
     
     def preprocess_task_context(self, task_context: Union[Dict[str, Any], List[Dict[str, Any]]], user_message: str) -> List[Dict[str, Any]]:
         """Preprocess and filter task context based on user message"""
-        # Convert single dict to list for consistent processing
+        
         if isinstance(task_context, dict):
             tasks = [task_context]
         else:
             tasks = task_context
-        
-        # Filter tasks based on relevance to user message
+
         filtered_tasks = self.filter_tasks_by_relevance(tasks, user_message)
         
         return filtered_tasks
@@ -341,104 +303,106 @@ class ChatService:
         task_context: Optional[Union[Dict[str, Any], List[Dict[str, Any]]]] = None,
         date_time: str = None
     ) -> Dict[str, Any]:
-        """
-        Process chat message with optional task context using OpenAI GPT
-        
-        Args:
-            message: User's chat message
-            task_context: Optional task context JSON (single dict or list of dicts)
-            date_time: Current date and time in ISO format (e.g., "2025-07-24T14:18:36.514Z")
-            
-        Returns:
-            Dictionary with response and success status
-        """
-        try:
-            system_prompt = f"""You are a helpful AI assistant with task management capabilities.
-Current date and time: {date_time}
-
-You help users manage their tasks and answer questions about their schedule, priorities, and workload.
-
-IMPORTANT: Always respond in the following JSON format:
-{{"response": "Your helpful response here", "user_msg": "The corrected user message (fix any errors or keep as-is)"}}"""
-            
-            if task_context:
-                # Preprocess and filter tasks based on user message
-                filtered_tasks = self.preprocess_task_context(task_context, message)
+                """
+                Process chat message with optional task context using OpenAI GPT
                 
-                if filtered_tasks:
-                    system_prompt += f"""
+                Args:
+                    message: User's chat message
+                    task_context: Optional task context JSON (single dict or list of dicts)
+                    date_time: Current date and time in ISO format (e.g., "2025-07-24T14:18:36.514Z")
+                    
+                Returns:
+                    Dictionary with response, success status, and optional task
+                """
+                try:
+                    # Parse the input date_time to get today and tomorrow
+                    current_date = datetime.fromisoformat(date_time.replace('Z', '+00:00'))
+                    tomorrow_date = current_date + timedelta(days=1)
+                    
+                    system_prompt = f"""You are a helpful AI assistant with task management capabilities.
+        Current date and time: {date_time}
+        Today's date: {current_date.strftime('%Y-%m-%d')} ({current_date.strftime('%A, %B %d, %Y')})
+        Tomorrow's date: {tomorrow_date.strftime('%Y-%m-%d')} ({tomorrow_date.strftime('%A, %B %d, %Y')})
 
-You have access to the following relevant tasks:
-{json.dumps(filtered_tasks, indent=2)}
+        You help users manage their tasks and answer questions. You can also detect when users want to create new tasks.
 
-Use this task information to provide relevant and contextual responses. You can reference specific tasks, help with scheduling, provide reminders, or answer questions related to the tasks. Focus on the most relevant information for the user's query.
+        TASK CREATION RULES:
+        - If user wants to add/create a task, respond with "Your task is being added" and include task JSON
+        - Task titles/descriptions stay in original language, other fields in English
+        - Don't use "today", "tomorrow", "next week" in title/description - use specific details
+        - Time format: HH:MM (24hr), use null if no specific time mentioned
+        - Priority: "high", "medium", or "low" based on urgency
+        - Date format: YYYY-MM-DD ("tomorrow" = {tomorrow_date.strftime('%Y-%m-%d')}, "today" = {current_date.strftime('%Y-%m-%d')})
 
-Guidelines:
-- The date field in tasks means the date when the task should be done
-- The time field in tasks is in 24-hour format
-- Be concise and helpful
-- Reference specific tasks when relevant
-- Provide actionable insights
-- Help prioritize and organize tasks
-- Suggest time management strategies when appropriate
-- IMPORTANT: Always respond in the following JSON format:
+        ALWAYS respond in JSON format:
+        {{"response": "Your response", "user_msg": "Corrected user message", "task": null or task_object}}
 
-{{"response": "Your helpful response here", "user_msg": "The corrected user message (fix any errors or keep as-is)"}}
+        Task object format when creating tasks:
+{{"id": "task_" + random_string, "title": "Task title", "description": "Description", "priority": "medium", "date": "YYYY-MM-DD", "time": "HH:MM", "category": "work/personal/etc", "status": "pending", "tags": ["tag1", "tag2"]}}
 
-Example response:
-{{"response": "Your schedule for today includes the task 'Fix minor bugs' which has already been completed. If you have any other tasks or need assistance with planning your day, feel free to let me know!", "user_msg": "What's my schedule for today?"}}
-"""
-                else:
-                    system_prompt += """
+CRITICAL: For the "id" field, generate an actual UUID in format: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx (like fb0a45db-a546-4aa6-8e4d-7f7cccf9a316). Do NOT use placeholder text - generate a real, unique UUID every time."""
+                    if task_context:
+                        filtered_tasks = self.preprocess_task_context(task_context, message)
+                        
+                        if filtered_tasks:
+                            system_prompt += f"""
 
-No tasks match your current query, but I'm here to help with general questions and task management advice.
+        You have access to these relevant tasks:
+        {json.dumps(filtered_tasks, indent=2)}
 
-IMPORTANT: Always respond in the following JSON format:
-{"response": "Your helpful response here"}
-"""
-            
-            # Get response from OpenAI
-            response = self.client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": message}
-                ],
-                temperature=0.7,
-                max_tokens=500
-            )
-            
-            ai_response = response.choices[0].message.content.strip()
-            
-            # Try to parse the AI response as JSON to extract structured data
-            try:
-                # Check if the response is in JSON format
-                if ai_response.strip().startswith('{') and ai_response.strip().endswith('}'):
-                    parsed_response = json.loads(ai_response)
+        Use this information to provide contextual responses about schedules, priorities, and workload."""
+                        else:
+                            system_prompt += """
+
+        No tasks match your current query, but I can help with general questions and task creation."""
+                    
+                    response = self.client.chat.completions.create(
+                        model="gpt-3.5-turbo",
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": message}
+                        ],
+                        temperature=0.7,
+                        max_tokens=600
+                    )
+                    
+                    ai_response = response.choices[0].message.content.strip()
+
+                    try:
+                        if ai_response.strip().startswith('{') and ai_response.strip().endswith('}'):
+                            parsed_response = json.loads(ai_response)
+                            return {
+                                "response": parsed_response.get("response", ai_response),
+                                "user_msg": parsed_response.get("user_msg", message),
+                                "task": parsed_response.get("task", None),
+                                "success": True
+                            }
+                        else:
+                            return {
+                                "response": ai_response,
+                                "user_msg": message,
+                                "task": None,
+                                "success": True
+                            }
+                    except json.JSONDecodeError:
+                        return {
+                            "response": ai_response,
+                            "user_msg": message,
+                            "task": None,
+                            "success": True
+                        }
+                    
+                except openai.OpenAIError as e:
                     return {
-                        "response": parsed_response.get("response", ai_response),
-                        "user_msg": parsed_response.get("user_msg", message),
-                    }
-                else:
-                    # If not JSON, return the response as-is
-                    return {
-                        "response": ai_response,
+                        "response": f"I apologize, but I'm experiencing some technical difficulties with the AI service: {str(e)}",
                         "user_msg": message,
+                        "task": None,
+                        "success": False
                     }
-            except json.JSONDecodeError:
-                # If JSON parsing fails, return the response as-is
-                return {
-                    "response": ai_response,
-                    "user_msg": message,
-                }
-            
-        except openai.OpenAIError as e:
-            return {
-                "response": f"I apologize, but I'm experiencing some technical difficulties with the AI service: {str(e)}",
-                "user_msg": message,
-            }
-        except Exception as e:
-            return {
-                "response": f"I apologize, but I encountered an error while processing your message: {str(e)}",
-                "user_msg": message,
-            }
+                except Exception as e:
+                    return {
+                        "response": f"I apologize, but I encountered an error while processing your message: {str(e)}",
+                        "user_msg": message,
+                        "task": None,
+                        "success": False
+                    }

@@ -72,7 +72,7 @@ class VoiceAssistantService:
               * "today" = {current_date.strftime('%Y-%m-%d')}
               * "next week" = approximate to 7 days from today
               * If no date mentioned, leave as null
-            - time: Extract any time mentions in HH:MM format (24 hr), if applicable. If no time mentioned, leave it as "00:00", MUST NOT SEND MORNING,EVENING, AFTERNOON, NIGHT, etc.
+            - time: Extract any time mentions in HH:MM format (24 hr), if applicable. If no time mentioned, leave it as "null", MUST NOT SEND MORNING,EVENING, AFTERNOON, NIGHT, etc.
             - category: Categorize the task (work, personal, health, shopping, meeting, reminder, etc.) (IN ENGLISH)
             - tags: Extract relevant keywords as tags (IN ENGLISH)
             

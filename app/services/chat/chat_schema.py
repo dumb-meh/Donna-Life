@@ -12,3 +12,4 @@ class ChatVoiceRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     response: str
+    task:Union[Dict[str, Any], List[Dict[str, Any]], Any]

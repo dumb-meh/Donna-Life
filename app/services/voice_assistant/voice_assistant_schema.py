@@ -17,11 +17,11 @@ class TaskItem(BaseModel):
     id: str
     title: str
     description: str
-    priority: str  # high, medium, low
-    date: Optional[str] = None  # Date when the task should be done (YYYY-MM-DD format)
-    time: Optional[str] = None  # Time when the task should be done (HH:MM format)
+    priority: str  
+    date: Optional[str] = None  
+    time: Optional[str] = None 
     category: Optional[str] = None
-    status: str = "pending"  # pending, in_progress, completed
+    status: str = "pending" 
     tags: Optional[List[str]] = []
     
 class VoiceAssistantResponse(BaseModel):
