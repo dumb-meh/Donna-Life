@@ -1,50 +1,18 @@
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import JSONResponse
 from .text_to_speech import TextToSpeechService
-from .text_to_speech_schema import TextToSpeechRequest, TextToSpeechResponse
+from .text_to_speech_schema import TextToSpeechRequest
 
 router = APIRouter()
 tts_service = TextToSpeechService()
 
-@router.post("/convert", response_model=TextToSpeechResponse)
-async def convert_text_to_speech(request: TextToSpeechRequest):
-    """
-    Convert text to speech audio
-    """
+@router.post("/greetings")
+async def generate_and_save_greeting(request: TextToSpeechRequest):
     try:
-        result = await tts_service.convert_text_to_speech(
+        filepath = await tts_service.convert_text_to_speech_and_save(
             text=request.text,
-            language=request.language,
-            voice=request.voice,
-            speed=request.speed
+            user_id=request.user_id,
+            greeting_no=request.greeting_no
         )
-        
-        return TextToSpeechResponse(**result)
-        
+        return {"message": "Audio saved", "filepath": filepath}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error converting text to speech: {str(e)}")
-
-@router.get("/voices")
-async def get_available_voices():
-    """
-    Get list of available voices for Google TTS
-    """
-    try:
-        # Google TTS supported languages
-        languages = [
-            {"id": "en", "name": "English", "language": ["en"]},
-            {"id": "es", "name": "Spanish", "language": ["es"]},
-            {"id": "fr", "name": "French", "language": ["fr"]},
-            {"id": "de", "name": "German", "language": ["de"]},
-            {"id": "it", "name": "Italian", "language": ["it"]},
-            {"id": "pt", "name": "Portuguese", "language": ["pt"]},
-            {"id": "ru", "name": "Russian", "language": ["ru"]},
-            {"id": "ja", "name": "Japanese", "language": ["ja"]},
-            {"id": "ko", "name": "Korean", "language": ["ko"]},
-            {"id": "zh", "name": "Chinese", "language": ["zh"]},
-        ]
-        
-        return JSONResponse(content={"voices": languages})
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error getting voices: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error generating audio: {str(e)}")

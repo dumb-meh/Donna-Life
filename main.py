@@ -11,7 +11,7 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Add CORS middleware
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -20,9 +20,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include routers
 app.include_router(voice_assistant_router, prefix="/voice-assistant", tags=["Voice Assistant"])
 app.include_router(chat_router, prefix="/chat", tags=["Chat"])
+app.include_router(text_to_speech_router, prefix="/greetings", tags=["Greetings"]) 
 
 @app.get("/")
 async def root():

@@ -1,71 +1,32 @@
-import tempfile
-import base64
-import os
-from typing import Optional
-from dotenv import load_dotenv
-import requests
-from gtts import gTTS
-import io
-
-# Load environment variables
-load_dotenv()
+from pathlib import Path
+from openai import OpenAI
+import asyncio
 
 class TextToSpeechService:
     def __init__(self):
-        # No additional configuration needed for Google TTS
-        pass
-        
-    async def convert_text_to_speech(
-        self, 
-        text: str, 
-        language: str = "en",
-        voice: str = "default",
-        speed: float = 1.0
-    ) -> dict:
+        self.client = OpenAI()
+
+    async def convert_text_to_speech_and_save(self, text: str, user_id: str, greeting_no: int) -> str:
         """
-        Convert text to speech audio using Google Text-to-Speech
-        
-        Args:
-            text: Text to convert to speech
-            language: Language code
-            voice: Voice type (not used with gTTS)
-            speed: Speech speed (not used with gTTS)
-            
-        Returns:
-            Dictionary with audio data and success status
+        Converts text to speech and saves it to greetings/{user_id}/{greeting_no}.mp3
+        Returns the file path as a string.
         """
-        try:
-            # Use Google Text-to-Speech
-            tts = gTTS(text=text, lang=language, slow=False)
-            
-            # Create temporary file for audio output
-            with tempfile.NamedTemporaryFile(suffix='.mp3', delete=False) as temp_file:
-                temp_file_path = temp_file.name
-            
-            # Save audio to temporary file
-            tts.save(temp_file_path)
-            
-            # Read generated audio file
-            with open(temp_file_path, 'rb') as audio_file:
-                audio_data = audio_file.read()
-            
-            # Clean up temporary file
-            os.unlink(temp_file_path)
-            
-            # Convert to base64
-            audio_base64 = base64.b64encode(audio_data).decode('utf-8')
-            
-            return {
-                "audio_file": audio_base64,
-                "success": True,
-                "message": "Text successfully converted to speech using Google TTS",
-                "file_format": "mp3"
-            }
-            
-        except Exception as e:
-            return {
-                "audio_file": "",
-                "success": False,
-                "message": f"Error converting text to speech: {str(e)}",
-                "file_format": "mp3"
-            }
+
+        # Build the file path
+        folder_path = Path("greetings") / user_id
+        folder_path.mkdir(parents=True, exist_ok=True)
+        speech_file_path = folder_path / f"{greeting_no}.mp3"
+
+        def write_audio_to_file():
+            with self.client.audio.speech.with_streaming_response.create(
+                model="gpt-4o-mini-tts",
+                voice="coral",
+                input=text,
+                instructions="Speak in a cheerful and positive tone."
+            ) as response:
+                response.stream_to_file(str(speech_file_path))
+
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, write_audio_to_file)
+
+        return str(speech_file_path)
