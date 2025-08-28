@@ -4,12 +4,17 @@ from app.services.voice_assistant.voice_assistant_route import router as voice_a
 from app.services.speech_to_text.speech_to_text_route import router as speech_to_text_router
 from app.services.text_to_speech.text_to_speech_route import router as text_to_speech_router
 from app.services.chat.chat_route import router as chat_router
+from fastapi.staticfiles import StaticFiles
+import os
+
 
 app = FastAPI(
     title="Voice Assistant API",
     description="A voice assistant that processes audio clips, creates tasks, and provides chat functionality with task context",
     version="1.0.0"
 )
+
+app.mount("/greetings", StaticFiles(directory=os.path.join(os.getcwd(), "greetings")), name="greetings")
 
 
 app.add_middleware(

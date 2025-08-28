@@ -1,10 +1,6 @@
 from pathlib import Path
 from openai import OpenAI
 import asyncio
-
-
-
-
 class TextToSpeechService:
     def __init__(self):
         self.client = OpenAI()
@@ -15,7 +11,6 @@ class TextToSpeechService:
         Returns the file path as a string.
         """
 
-        # Build the file path
         BASE_DIR = Path(__file__).resolve().parents[2]
         folder_path = BASE_DIR / "greetings" / user_id
         folder_path.mkdir(parents=True, exist_ok=True)
