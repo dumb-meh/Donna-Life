@@ -10,5 +10,5 @@ services:
       - .env
     volumes:
       - ./logs:/app/logs
-      - ./greetings:/app/greetings
+      - ./greetings:/app/app/greetings
     restart: unless-stopped

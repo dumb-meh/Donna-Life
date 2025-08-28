@@ -16,7 +16,7 @@ class TextToSpeechService:
         """
 
         # Build the file path
-        BASE_DIR = Path(__file__).resolve().parent.parent
+        BASE_DIR = Path(__file__).resolve().parents[2]
         folder_path = BASE_DIR / "greetings" / user_id
         folder_path.mkdir(parents=True, exist_ok=True)
         speech_file_path = folder_path / f"{greeting_no}.mp3"
