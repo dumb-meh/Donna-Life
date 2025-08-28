@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException
 from .text_to_speech import TextToSpeechService
 from .text_to_speech_schema import TextToSpeechRequest
 
+
 router = APIRouter()
 tts_service = TextToSpeechService()
 
