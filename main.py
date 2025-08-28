@@ -22,7 +22,7 @@ app.add_middleware(
 
 app.include_router(voice_assistant_router, prefix="/voice-assistant", tags=["Voice Assistant"])
 app.include_router(chat_router, prefix="/chat", tags=["Chat"])
-app.include_router(text_to_speech_router, prefix="/greetings", tags=["Greetings"]) 
+app.include_router(text_to_speech_router,tags=["Greetings"]) 
 
 @app.get("/")
 async def root():
@@ -34,5 +34,5 @@ async def health_check():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8029)
+    uvicorn.run(app, host="0.0.0.0", port=8033)
 
