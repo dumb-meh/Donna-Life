@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.services.voice_assistant.voice_assistant_route import router as voice_assistant_router
 from app.services.speech_to_text.speech_to_text_route import router as speech_to_text_router
-from app.services.text_to_speech.text_to_speech_route import router as text_to_speech_router
+from app.services.greetings.greetings_route import router as text_to_speech_router
 from app.services.chat.chat_route import router as chat_router
 from fastapi.staticfiles import StaticFiles
 import os
