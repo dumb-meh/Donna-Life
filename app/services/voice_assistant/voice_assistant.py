@@ -1,11 +1,11 @@
-import openai
+import os
 import json
 import uuid
+import re
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
 from dotenv import load_dotenv
-import os
-import re
+import openai
 
 # Load environment variables
 load_dotenv()
@@ -99,8 +99,7 @@ class VoiceAssistantService:
                 "tags": ["call", "meeting", "john", "project"]
             }}
             """
-            
-            # Get response from OpenAI
+
             response = self.client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
@@ -112,7 +111,6 @@ class VoiceAssistantService:
             
             response_text = response.choices[0].message.content.strip()
             
-            # Clean the response to extract JSON
             json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
             if json_match:
                 json_str = json_match.group()
@@ -120,11 +118,9 @@ class VoiceAssistantService:
             else:
                 raise ValueError("No valid JSON found in AI response")
             
-            # Add required fields
             task_data["id"] = str(uuid.uuid4())
             task_data["status"] = "pending"
-            
-            # Validate and clean data
+
             task_data = self._validate_task_data(task_data)
             
             return {
@@ -154,7 +150,6 @@ class VoiceAssistantService:
     
     def _validate_task_data(self, task_data: Dict[str, Any]) -> Dict[str, Any]:
         """Validate and clean task data"""
-        # Ensure required fields exist
         if "title" not in task_data or not task_data["title"]:
             task_data["title"] = "Untitled Task"
         
@@ -170,20 +165,16 @@ class VoiceAssistantService:
         if "tags" not in task_data:
             task_data["tags"] = []
         
-        # Validate date format (YYYY-MM-DD)
         if "date" in task_data and task_data["date"]:
             try:
-                # Try to parse the date to validate format
                 datetime.strptime(task_data["date"], '%Y-%m-%d')
             except ValueError:
                 try:
-                    # Try to parse ISO format and convert to date only
                     parsed_date = datetime.fromisoformat(task_data["date"].replace('Z', '+00:00'))
                     task_data["date"] = parsed_date.strftime('%Y-%m-%d')
                 except:
                     task_data["date"] = None
         
-        # Handle legacy due_date field if present
         if "due_date" in task_data:
             if task_data["due_date"] and not task_data.get("date"):
                 try:
@@ -191,7 +182,6 @@ class VoiceAssistantService:
                     task_data["date"] = parsed_date.strftime('%Y-%m-%d')
                 except:
                     pass
-            # Remove due_date field
             del task_data["due_date"]
         
         return task_data

@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form
 from fastapi.responses import JSONResponse
-from .voice_assistant import VoiceAssistantService
-from .voice_assistant_schema import VoiceAssistantRequest, VoiceAssistantResponse, TaskItem, TextRequest
-from ..speech_to_text.speech_to_text import SpeechToTextService
+from app.services.voice_assistant.voice_assistant import VoiceAssistantService
+from app.services.voice_assistant.voice_assistant_schema import VoiceAssistantRequest, VoiceAssistantResponse, TaskItem, TextRequest
+from app.services.speech_to_text.speech_to_text import SpeechToTextService
 
 router = APIRouter()
 voice_assistant_service = VoiceAssistantService()
