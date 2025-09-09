@@ -198,7 +198,7 @@ Examples:
                     date_time=date_time
                 )
                 return {
-                    "response": "Your task is being added",
+                    "response": "Your task is added",
                     "task": result.get("task", None)
                 }
             
