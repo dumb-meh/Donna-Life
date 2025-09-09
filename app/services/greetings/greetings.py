@@ -63,8 +63,8 @@ class Greetings:
         urls = await asyncio.gather(*tasks)
 
         result["filepaths"] = {
-            "German": urls[6:],  # Second 6 files
-            "English": urls[:6]  # First 6 files
+            "German": urls[6:],  
+            "English": urls[:6]  
         }
 
         return result
