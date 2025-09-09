@@ -14,7 +14,7 @@ app = FastAPI(
     version="1.0.0"
 )
 
-app.mount("/greetings", StaticFiles(directory=os.path.join(os.getcwd(), "greetings")), name="greetings")
+app.mount("/greetings", StaticFiles(directory="/app/app/greetings"), name="greetings")
 
 
 app.add_middleware(
