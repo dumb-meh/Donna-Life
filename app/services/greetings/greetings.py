@@ -32,7 +32,7 @@ class Greetings:
         }
 
         BASE_DIR = Path(__file__).resolve().parents[2]
-        base_url = f"http://206.162.244.131:8033/greetings/{user_id}"
+        base_url = f"http://206.162.244.131:8035/greetings/{user_id}"
 
         result = {"message": "Audio files saved", "filepaths": {}}
 
