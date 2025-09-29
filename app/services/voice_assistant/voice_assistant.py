@@ -51,8 +51,26 @@ class VoiceAssistantService:
             - If the text is already correct, use it as is
 
             STEP 2: EXTRACT TASK INFORMATION FROM THE CORRECTED TEXT
-            THE OUTPUT JSON STRUCTURE AND FIELD NAMES WILL BE IN ENGLISH, BUT THE VALUES FOR 'title' AND 'description' MUST BE IN THE SAME LANGUAGE AS THE INPUT TEXT.
-            ALL OTHER FIELD VALUES (priority, date, time, category, tags) SHOULD BE IN ENGLISH.DON'T USE TOMORROW, TODAY, NEXT WEEK, etc. IN THE TITLE OR DESCRIPTION.
+            
+            ⚠️ CRITICAL LANGUAGE RULE - ABSOLUTELY NO TRANSLATION ALLOWED ⚠️
+            
+            1. Count the words in each language in the input text
+            2. The language with MORE WORDS is the PRIMARY language
+            3. ALWAYS use the PRIMARY language for 'title' and 'description' - NEVER translate them
+            4. Even if English words appear in German text, if German has more words, use GERMAN
+            5. Even if German words appear in English text, if English has more words, use ENGLISH
+            
+            Language Detection Examples:
+            - "Ich muss die bank über die neue transaktion informieren, bitte schick die email" 
+              → German: 11 words, English: 2 words → PRIMARY: German → Use German for title/description
+            - "Ich habe ein appointment tomorrow mit dem doctor" 
+              → German: 5 words, English: 3 words → PRIMARY: German → Use German for title/description
+            - "I need to call the Arzt tomorrow about my Termin"
+              → English: 7 words, German: 2 words → PRIMARY: English → Use English for title/description
+            
+            NEVER TRANSLATE THE TITLE OR DESCRIPTION - KEEP THEM IN THE PRIMARY LANGUAGE!
+            
+            ALL OTHER FIELD VALUES (priority, date, time, category, tags) SHOULD BE IN ENGLISH. DON'T USE TOMORROW, TODAY, NEXT WEEK, etc. IN THE TITLE OR DESCRIPTION.
             
             Current date and time: {date_time}
             Today's date: {current_date.strftime('%Y-%m-%d')} ({current_date.strftime('%A, %B %d, %Y')})
@@ -64,39 +82,42 @@ class VoiceAssistantService:
             Text to analyze: "{transcribed_text}"
             
             Please extract and structure this information into a task with the following format:
-            - title: A clear, concise title for the task (IN THE SAME LANGUAGE AS INPUT) NOTE: DON'T USE TOMORROW, TODAY, NEXT WEEK, etc. IN THE TITLE
-            - description: Detailed description of what needs to be done (IN THE SAME LANGUAGE AS INPUT) NOTE: DON'T USE TOMORROW, TODAY, NEXT WEEK, etc. IN THE DESCRIPTION
+            - title: A clear, concise title for the task (IN THE PRIMARY LANGUAGE - NO TRANSLATION!) NOTE: DON'T USE TOMORROW, TODAY, NEXT WEEK, etc. IN THE TITLE
+            - description: Detailed description of what needs to be done (IN THE PRIMARY LANGUAGE - NO TRANSLATION!) NOTE: DON'T USE TOMORROW, TODAY, NEXT WEEK, etc. IN THE DESCRIPTION
             - priority: Determine if this is "high", "medium", or "low" priority based on urgency keywords (IN ENGLISH)
             - date: Extract any date mentions and convert to YYYY-MM-DD format. Common phrases:
-              * "tomorrow" = {tomorrow_date.strftime('%Y-%m-%d')}
-              * "today" = {current_date.strftime('%Y-%m-%d')}
-              * "next week" = approximate to 7 days from today
+              * "tomorrow/morgen" = {tomorrow_date.strftime('%Y-%m-%d')}
+              * "today/heute" = {current_date.strftime('%Y-%m-%d')}
+              * "next week/nächste woche" = approximate to 7 days from today
               * If no date mentioned, leave as null
             - time: Extract any time mentions in HH:MM format (24 hr), if applicable. If no time mentioned, leave it as "null", MUST NOT SEND MORNING,EVENING, AFTERNOON, NIGHT, etc.
             - category: Categorize the task (work, personal, health, shopping, meeting, reminder, etc.) (IN ENGLISH)
             - tags: Extract relevant keywords as tags (IN ENGLISH)
             
             Respond with a JSON object only, no additional text.
-            Example format for Multilingual input:
+            
+            Example for German input with some English words:
+            Input: "Ich muss die bank über die neue transaktion informieren, bitte schick die email"
             {{
-                "title":  সকাল ১০ টায় মিটিং",
-                "description": "সকাল ১০ টায় প্রজেক্ট ম্যানেজারের সাথে মিটিং আছে",
+                "title": "Bank über neue Transaktion informieren",
+                "description": "Die Bank über die neue Transaktion informieren und Email schicken",
                 "priority": "medium",
-                "date": "2025-07-24",
-                "time": "10:00",
+                "date": null,
+                "time": null,
                 "category": "work",
-                "tags": ["meeting", "project", "manager"]
+                "tags": ["bank", "transaction", "email"]
             }}
             
-            Example format for English input:
+            Example for English input with some German words:
+            Input: "I need to call the Arzt tomorrow about my Termin"
             {{
-                "title": "Call John about project meeting",
-                "description": "Need to call John to discuss the upcoming project meeting details",
+                "title": "Call the doctor about appointment",
+                "description": "Need to call the doctor tomorrow to discuss the appointment",
                 "priority": "medium",
-                "date": "2025-07-03",
-                "time": "14:00",
-                "category": "work",
-                "tags": ["call", "meeting", "john", "project"]
+                "date": "{tomorrow_date.strftime('%Y-%m-%d')}",
+                "time": null,
+                "category": "health",
+                "tags": ["call", "doctor", "appointment"]
             }}
             """
 
