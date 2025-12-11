@@ -134,6 +134,46 @@ class ChatService:
     
 
 
+    def detect_language(self, message: str) -> str:
+        """
+        Detect the language of the user's message
+        
+        Args:
+            message: User's message
+            
+        Returns:
+            Language code: 'de' for German, 'en' for English, or other language code
+        """
+        try:
+            system_prompt = """You are a language detector. 
+Detect the PRIMARY language of the user's message by counting meaningful words.
+Priority languages: German (de) and English (en).
+
+Response must be in JSON format: {"language": "de" or "en" or other language code}
+
+Examples:
+- "Remind me to call John tomorrow" -> {"language": "en"}
+- "Erinnere mich daran, morgen anzurufen" -> {"language": "de"}
+- "Ich habe ein meeting tomorrow" -> {"language": "de"} (more German words)
+- "I need to call the Arzt" -> {"language": "en"} (more English words)
+"""
+            response = self.client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": message}
+                ],
+                temperature=0.1,
+                max_tokens=50
+            )
+            
+            result = json.loads(response.choices[0].message.content.strip())
+            return result.get("language", "en")
+            
+        except Exception as e:
+            logger.error(f"Error in language detection: {str(e)}")
+            return "en"  # Default to English
+    
     def detect_task_intent(self, message: str) -> Dict[str, Any]:
         """
         Detect if user message indicates intent to add a task
@@ -202,12 +242,24 @@ Examples in German:
             intent_result = self.detect_task_intent(message)
 
             if intent_result.get("is_task", False) and intent_result.get("confidence", 0) > 0.7:
+                # Detect language to provide appropriate response
+                language = self.detect_language(message)
+                
+                # Multilingual responses for task confirmation
+                task_added_responses = {
+                    "de": "Deine Aufgabe wurde hinzugefügt",
+                    "en": "Your task has been added",
+                    "es": "Tu tarea ha sido añadida",
+                    "fr": "Votre tâche a été ajoutée",
+                    "it": "Il tuo compito è stato aggiunto"
+                }
+                
                 result = await voice_assistant.process_voice_and_text(
                     transcribed_text=message,
                     date_time=date_time
                 )
                 return {
-                    "response": "Your task is added",
+                    "response": task_added_responses.get(language, task_added_responses["en"]),
                     "task": result.get("task", None)
                 }
             
