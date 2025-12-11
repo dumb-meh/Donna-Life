@@ -147,12 +147,21 @@ class ChatService:
         try:
             system_prompt = """You are a task intent detector. 
 Determine if the user message indicates they want to add/create a new task or reminder.
+Works with multiple languages, especially German and English.
+
 Response must be in JSON format: {"is_task": boolean, "confidence": float}
-Examples:
+
+Examples in English:
 - "Remind me to call John tomorrow" -> {"is_task": true, "confidence": 0.9}
 - "How are you?" -> {"is_task": false, "confidence": 0.95}
 - "Schedule a meeting with team" -> {"is_task": true, "confidence": 0.85}
 - "What's on my calendar?" -> {"is_task": false, "confidence": 0.8}
+
+Examples in German:
+- "Erinnere mich daran, morgen John anzurufen" -> {"is_task": true, "confidence": 0.9}
+- "Wie geht es dir?" -> {"is_task": false, "confidence": 0.95}
+- "Plane ein Meeting mit dem Team" -> {"is_task": true, "confidence": 0.85}
+- "Was steht in meinem Kalender?" -> {"is_task": false, "confidence": 0.8}
 """
             response = self.client.chat.completions.create(
                 model="gpt-3.5-turbo",
@@ -213,8 +222,17 @@ Examples:
 
     You help users manage their tasks and answer questions about their schedule, priorities, and workload. When you answer about tasks, use proper style and be helpful. 
 
+    ⚠️ CRITICAL LANGUAGE REQUIREMENT ⚠️:
+    1. DETECT the language of the user's message
+    2. RESPOND in the EXACT SAME LANGUAGE as the user's message
+    3. PRIMARY LANGUAGES: German and English (most common)
+    4. If the user writes in German, respond in German
+    5. If the user writes in English, respond in English
+    6. If the user writes in any other language, respond in that language
+    7. DO NOT translate or switch languages - match the user's language EXACTLY
+
     IMPORTANT: Always respond in the following JSON format:
-    {{"response": "Your helpful response here"}}
+    {{"response": "Your helpful response here IN THE USER'S LANGUAGE"}}
 
     When listing tasks for the user, you should mention all relevant tasks scheduled for today. Provide not only the task name but also relevant details, such as the time, priority, and a suggestion for how to handle conflicting or upcoming tasks.
 
@@ -232,6 +250,7 @@ Examples:
     - Reference specific tasks when relevant.
     - Provide actionable insights.
     - Help prioritize and organize tasks
+    - ALWAYS respond in the same language as the user's message
     """
             
             if task_context:
@@ -249,9 +268,10 @@ Examples:
     - Reference specific tasks when relevant
     - Provide actionable insights
     - Help prioritize and organize tasks
+    - RESPOND in the SAME LANGUAGE as the user's message (tasks may be in different languages, but YOUR response must match the user's message language)
 
     IMPORTANT: Always respond in the following JSON format:
-    {{"response": "Your helpful response here"}}
+    {{"response": "Your helpful response here IN THE USER'S LANGUAGE"}}
     """
 
             

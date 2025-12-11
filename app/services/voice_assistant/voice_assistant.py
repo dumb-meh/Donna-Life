@@ -39,64 +39,71 @@ class VoiceAssistantService:
             
             # Create prompt for OpenAI to extract task information
             prompt = f"""
-            YOU MUST BE PREPARED FOR MULTILINGUAL INPUTS. Your task has two steps:
+            ⚠️ CRITICAL: YOU MUST PRESERVE THE ORIGINAL LANGUAGE OF THE INPUT TEXT ⚠️
+            
+            YOUR TASK HAS TWO STEPS:
 
             STEP 1: FIX ANY TRANSCRIPTION ERRORS IN THE INPUT TEXT
-            - Keep the same language as the input
+            - Keep the EXACT SAME language as the input - DO NOT TRANSLATE
             - Fix any obvious transcription errors (especially with numbers, dates, times)
             - Maintain the original meaning and intent
             - If text mentions time (like 2:00 or 14:00), ensure it's properly formatted
             - Fix any word spacing issues
-            - DO NOT translate to another language
             - If the text is already correct, use it as is
 
             STEP 2: EXTRACT TASK INFORMATION FROM THE CORRECTED TEXT
             
-            ⚠️ CRITICAL LANGUAGE RULE - ABSOLUTELY NO TRANSLATION ALLOWED ⚠️
+            ⚠️ ABSOLUTE LANGUAGE PRESERVATION RULES ⚠️
             
-            1. Count the words in each language in the input text
-            2. The language with MORE WORDS is the PRIMARY language
-            3. ALWAYS use the PRIMARY language for 'title' and 'description' - NEVER translate them
-            4. Even if English words appear in German text, if German has more words, use GERMAN
-            5. Even if German words appear in English text, if English has more words, use ENGLISH
+            PRIMARY LANGUAGES: GERMAN and ENGLISH (highest priority)
+            
+            LANGUAGE DETECTION:
+            1. Identify the PRIMARY language by counting content words (ignore filler words)
+            2. The language with MORE MEANINGFUL WORDS is the PRIMARY language
+            3. ALWAYS keep 'title' and 'description' in the PRIMARY language
+            4. NEVER translate the title or description - even if they contain mixed languages
+            5. Keep exact phrases and terminology from the original text
             
             Language Detection Examples:
             - "Ich muss die bank über die neue transaktion informieren, bitte schick die email" 
-              → German: 11 words, English: 2 words → PRIMARY: German → Use German for title/description
+              → PRIMARY: German (11 German words vs 2 English) → Keep title/description in GERMAN
             - "Ich habe ein appointment tomorrow mit dem doctor" 
-              → German: 5 words, English: 3 words → PRIMARY: German → Use German for title/description
+              → PRIMARY: German (5 German words vs 3 English) → Keep title/description in GERMAN  
             - "I need to call the Arzt tomorrow about my Termin"
-              → English: 7 words, German: 2 words → PRIMARY: English → Use English for title/description
+              → PRIMARY: English (7 English words vs 2 German) → Keep title/description in ENGLISH
+            - "Remind me morgen to buy Brot"
+              → PRIMARY: English (3 English words vs 2 German) → Keep title/description in ENGLISH
+            - "Erinner mich daran tomorrow to call"
+              → PRIMARY: German (3 German words vs 3 English = tie, but starts with German) → Keep in GERMAN
             
-            NEVER TRANSLATE THE TITLE OR DESCRIPTION - KEEP THEM IN THE PRIMARY LANGUAGE!
+            🚫 NEVER TRANSLATE THE TITLE OR DESCRIPTION 🚫
             
-            ALL OTHER FIELD VALUES (priority, date, time, category, tags) SHOULD BE IN ENGLISH. DON'T USE TOMORROW, TODAY, NEXT WEEK, etc. IN THE TITLE OR DESCRIPTION.
+            FIELD INSTRUCTIONS:
+            - title: Clear, concise task title (IN PRIMARY LANGUAGE - NO TRANSLATION!)
+                    * DO NOT use temporal words like "tomorrow/morgen", "today/heute", "next week/nächste Woche"
+                    * Focus on the action and object
+            - description: Detailed description (IN PRIMARY LANGUAGE - NO TRANSLATION!)
+                         * DO NOT use temporal words like "tomorrow/morgen", "today/heute"  
+                         * Explain what needs to be done
+            - priority: "high", "medium", or "low" (IN ENGLISH)
+            - date: YYYY-MM-DD format (IN ENGLISH):
+              * "tomorrow/morgen" = {tomorrow_date.strftime('%Y-%m-%d')}
+              * "today/heute" = {current_date.strftime('%Y-%m-%d')}
+              * "next week/nächste woche" = approximate to 7 days from today
+              * If no date mentioned, use null
+            - time: HH:MM format (24-hour). If no specific time, use null. NEVER use words like "morning/Morgen", "evening/Abend", "afternoon/Nachmittag", "night/Nacht"
+            - category: Task category (IN ENGLISH): work, personal, health, shopping, meeting, reminder, etc.
+            - tags: Relevant keywords (IN ENGLISH)
             
             Current date and time: {date_time}
             Today's date: {current_date.strftime('%Y-%m-%d')} ({current_date.strftime('%A, %B %d, %Y')})
             Tomorrow's date: {tomorrow_date.strftime('%Y-%m-%d')} ({tomorrow_date.strftime('%A, %B %d, %Y')})
             
-            Analyze the following text and extract task information to create a structured task JSON.
-            The text might contain a task request, reminder, or action item.
-            
             Text to analyze: "{transcribed_text}"
             
-            Please extract and structure this information into a task with the following format:
-            - title: A clear, concise title for the task (IN THE PRIMARY LANGUAGE - NO TRANSLATION!) NOTE: DON'T USE TOMORROW, TODAY, NEXT WEEK, etc. IN THE TITLE
-            - description: Detailed description of what needs to be done (IN THE PRIMARY LANGUAGE - NO TRANSLATION!) NOTE: DON'T USE TOMORROW, TODAY, NEXT WEEK, etc. IN THE DESCRIPTION
-            - priority: Determine if this is "high", "medium", or "low" priority based on urgency keywords (IN ENGLISH)
-            - date: Extract any date mentions and convert to YYYY-MM-DD format. Common phrases:
-              * "tomorrow/morgen" = {tomorrow_date.strftime('%Y-%m-%d')}
-              * "today/heute" = {current_date.strftime('%Y-%m-%d')}
-              * "next week/nächste woche" = approximate to 7 days from today
-              * If no date mentioned, leave as null
-            - time: Extract any time mentions in HH:MM format (24 hr), if applicable. If no time mentioned, leave it as "null", MUST NOT SEND MORNING,EVENING, AFTERNOON, NIGHT, etc.
-            - category: Categorize the task (work, personal, health, shopping, meeting, reminder, etc.) (IN ENGLISH)
-            - tags: Extract relevant keywords as tags (IN ENGLISH)
+            Respond with ONLY a JSON object, no additional text.
             
-            Respond with a JSON object only, no additional text.
-            
-            Example for German input with some English words:
+            Example for German input:
             Input: "Ich muss die bank über die neue transaktion informieren, bitte schick die email"
             {{
                 "title": "Bank über neue Transaktion informieren",
