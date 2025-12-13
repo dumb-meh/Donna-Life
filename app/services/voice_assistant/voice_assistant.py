@@ -39,87 +39,123 @@ class VoiceAssistantService:
             
             # Create prompt for OpenAI to extract task information
             prompt = f"""
-            ⚠️ CRITICAL: YOU MUST PRESERVE THE ORIGINAL LANGUAGE OF THE INPUT TEXT ⚠️
+            🔴 ABSOLUTE RULE: NEVER TRANSLATE THE USER'S TEXT 🔴
             
             YOUR TASK HAS TWO STEPS:
 
-            STEP 1: FIX ANY TRANSCRIPTION ERRORS IN THE INPUT TEXT
-            - Keep the EXACT SAME language as the input - DO NOT TRANSLATE
-            - Fix any obvious transcription errors (especially with numbers, dates, times)
-            - Maintain the original meaning and intent
-            - If text mentions time (like 2:00 or 14:00), ensure it's properly formatted
-            - Fix any word spacing issues
-            - If the text is already correct, use it as is
+            STEP 1: FIX MINOR TRANSCRIPTION ERRORS (SAME LANGUAGE ONLY)
+            - Keep the EXACT SAME language as the input
+            - Only fix obvious typos (e.g., "auframen" → "aufräumen")
+            - DO NOT TRANSLATE to any other language
+            - If text is in German, keep it German
+            - If text is in English, keep it English
 
-            STEP 2: EXTRACT TASK INFORMATION FROM THE CORRECTED TEXT
+            STEP 2: CREATE TASK IN THE SAME LANGUAGE AS INPUT
             
-            ⚠️ ABSOLUTE LANGUAGE PRESERVATION RULES ⚠️
+            🚨 CRITICAL LANGUAGE RULES - READ CAREFULLY 🚨
             
-            PRIMARY LANGUAGES: GERMAN and ENGLISH (highest priority)
+            LANGUAGE PRIORITY: GERMAN and ENGLISH (detect which one the user is using)
             
-            LANGUAGE DETECTION:
-            1. Identify the PRIMARY language by counting content words (ignore filler words)
-            2. The language with MORE MEANINGFUL WORDS is the PRIMARY language
-            3. ALWAYS keep 'title' and 'description' in the PRIMARY language
-            4. NEVER translate the title or description - even if they contain mixed languages
-            5. Keep exact phrases and terminology from the original text
+            DETECTION RULES:
+            1. Check if the input contains German words (ich, mich, zimmer, aufräumen, morgen, heute, etc.)
+               → If YES, the PRIMARY language is GERMAN
+            2. Check if the input contains English words (remind, tomorrow, today, meeting, call, etc.)
+               → If YES and no German words, the PRIMARY language is ENGLISH
+            3. For mixed inputs, count which language has MORE words
             
-            Language Detection Examples:
-            - "Ich muss die bank über die neue transaktion informieren, bitte schick die email" 
-              → PRIMARY: German (11 German words vs 2 English) → Keep title/description in GERMAN
-            - "Ich habe ein appointment tomorrow mit dem doctor" 
-              → PRIMARY: German (5 German words vs 3 English) → Keep title/description in GERMAN  
-            - "I need to call the Arzt tomorrow about my Termin"
-              → PRIMARY: English (7 English words vs 2 German) → Keep title/description in ENGLISH
-            - "Remind me morgen to buy Brot"
-              → PRIMARY: English (3 English words vs 2 German) → Keep title/description in ENGLISH
-            - "Erinner mich daran tomorrow to call"
-              → PRIMARY: German (3 German words vs 3 English = tie, but starts with German) → Keep in GERMAN
+            🔴 MANDATORY: Title and Description MUST be in the PRIMARY language 🔴
             
-            🚫 NEVER TRANSLATE THE TITLE OR DESCRIPTION 🚫
+            EXAMPLES:
+            
+            ✅ CORRECT German Task:
+            Input: "zimmer aufräumen"
+            Output: {{
+                "title": "Zimmer aufräumen",
+                "description": "Das Zimmer aufräumen und ordnen",
+                ...
+            }}
+            
+            ❌ WRONG (NEVER DO THIS):
+            Input: "zimmer aufräumen"
+            Output: {{
+                "title": "Room tidying",  ← WRONG! This is translated!
+                "description": "Tidying up the room",  ← WRONG! This is translated!
+                ...
+            }}
+            
+            ✅ CORRECT English Task:
+            Input: "tidy up room"
+            Output: {{
+                "title": "Tidy up room",
+                "description": "Clean and organize the room",
+                ...
+            }}
+            
+            ✅ CORRECT Mixed Language (German primary):
+            Input: "ich muss ein meeting vorbereiten"
+            Output: {{
+                "title": "Meeting vorbereiten",
+                "description": "Ein Meeting vorbereiten und planen",
+                ...
+            }}
+            
+            🔴 IF INPUT IS GERMAN → KEEP EVERYTHING GERMAN 🔴
+            🔴 IF INPUT IS ENGLISH → KEEP EVERYTHING ENGLISH 🔴
             
             FIELD INSTRUCTIONS:
-            - title: Clear, concise task title (IN PRIMARY LANGUAGE - NO TRANSLATION!)
-                    * DO NOT use temporal words like "tomorrow/morgen", "today/heute", "next week/nächste Woche"
-                    * Focus on the action and object
-            - description: Detailed description (IN PRIMARY LANGUAGE - NO TRANSLATION!)
-                         * DO NOT use temporal words like "tomorrow/morgen", "today/heute"  
-                         * Explain what needs to be done
-            - priority: "high", "medium", or "low" (IN ENGLISH)
-            - date: YYYY-MM-DD format (IN ENGLISH):
-              * "tomorrow/morgen" = {tomorrow_date.strftime('%Y-%m-%d')}
-              * "today/heute" = {current_date.strftime('%Y-%m-%d')}
-              * "next week/nächste woche" = approximate to 7 days from today
+            - title: Task title in PRIMARY language (NO TRANSLATION!)
+                    * Remove temporal words like "tomorrow", "morgen", "today", "heute"
+                    * Example: "zimmer aufräumen morgen" → title: "Zimmer aufräumen"
+            - description: Detailed description in PRIMARY language (NO TRANSLATION!)
+                         * Example for German: "Das Zimmer aufräumen und in Ordnung bringen"
+                         * Example for English: "Clean and organize the room"
+            - priority: "high", "medium", or "low" (English)
+            - date: YYYY-MM-DD format:
+              * "tomorrow"/"morgen" = {tomorrow_date.strftime('%Y-%m-%d')}
+              * "today"/"heute" = {current_date.strftime('%Y-%m-%d')}
+              * "next week"/"nächste woche" = +7 days
               * If no date mentioned, use null
-            - time: HH:MM format (24-hour). If no specific time, use null. NEVER use words like "morning/Morgen", "evening/Abend", "afternoon/Nachmittag", "night/Nacht"
-            - category: Task category (IN ENGLISH): work, personal, health, shopping, meeting, reminder, etc.
-            - tags: Relevant keywords (IN ENGLISH)
+            - time: HH:MM format (24-hour). If no specific time, use null
+            - category: Task category in English (work, personal, health, shopping, meeting, reminder)
+            - tags: Keywords in English
             
             Current date and time: {date_time}
-            Today's date: {current_date.strftime('%Y-%m-%d')} ({current_date.strftime('%A, %B %d, %Y')})
-            Tomorrow's date: {tomorrow_date.strftime('%Y-%m-%d')} ({tomorrow_date.strftime('%A, %B %d, %Y')})
+            Today: {current_date.strftime('%Y-%m-%d')}
+            Tomorrow: {tomorrow_date.strftime('%Y-%m-%d')}
             
             Text to analyze: "{transcribed_text}"
             
-            Respond with ONLY a JSON object, no additional text.
+            Respond with ONLY a JSON object.
             
-            Example for German input:
-            Input: "Ich muss die bank über die neue transaktion informieren, bitte schick die email"
+            German Input Example:
+            Input: "zimmer aufräumen"
+            {{
+                "title": "Zimmer aufräumen",
+                "description": "Das Zimmer aufräumen und in Ordnung bringen",
+                "priority": "medium",
+                "date": null,
+                "time": null,
+                "category": "personal",
+                "tags": ["room", "cleaning"]
+            }}
+            
+            German Input with Context:
+            Input: "Ich muss die bank über die neue transaktion informieren"
             {{
                 "title": "Bank über neue Transaktion informieren",
-                "description": "Die Bank über die neue Transaktion informieren und Email schicken",
+                "description": "Die Bank über die neue Transaktion informieren",
                 "priority": "medium",
                 "date": null,
                 "time": null,
                 "category": "work",
-                "tags": ["bank", "transaction", "email"]
+                "tags": ["bank", "transaction"]
             }}
             
-            Example for English input with some German words:
-            Input: "I need to call the Arzt tomorrow about my Termin"
+            English Input Example:
+            Input: "I need to call the doctor tomorrow about my appointment"
             {{
                 "title": "Call the doctor about appointment",
-                "description": "Need to call the doctor tomorrow to discuss the appointment",
+                "description": "Need to call the doctor to discuss the appointment",
                 "priority": "medium",
                 "date": "{tomorrow_date.strftime('%Y-%m-%d')}",
                 "time": null,
@@ -129,12 +165,12 @@ class VoiceAssistantService:
             """
 
             response = self.client.chat.completions.create(
-                model="gpt-3.5-turbo",
+                model="gpt-4-turbo",
                 messages=[
-                    {"role": "system", "content": "You are a helpful assistant that extracts task information from text and returns it as JSON."},
+                    {"role": "system", "content": "You are a multilingual task extraction assistant. You MUST preserve the original language of the user's input. NEVER translate German to English or English to German. Extract task information while keeping title and description in the same language as the input."},
                     {"role": "user", "content": prompt}
                 ],
-                temperature=0.3
+                temperature=0.1
             )
             
             response_text = response.choices[0].message.content.strip()
