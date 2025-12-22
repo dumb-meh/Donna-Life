@@ -251,7 +251,10 @@ Examples in German:
                     "en": "Your task has been added",
                     "es": "Tu tarea ha sido añadida",
                     "fr": "Votre tâche a été ajoutée",
-                    "it": "Il tuo compito è stato aggiunto"
+                    "it": "Il tuo compito è stato aggiunto",
+                    "tr": "Göreviniz eklendi",
+                    "ur": "آپ کا کام شامل کر دیا گیا ہے",
+                    "ar": "تمت إضافة مهمتك"
                 }
                 
                 result = await voice_assistant.process_voice_and_text(
@@ -328,7 +331,7 @@ Examples in German:
 
             
             response = self.client.chat.completions.create(
-                model="gpt-4-turbo",  
+                model="gpt-4.1",  
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": message}
