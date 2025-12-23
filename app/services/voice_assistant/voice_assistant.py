@@ -45,41 +45,69 @@ class VoiceAssistantService:
 
             STEP 1: FIX MINOR TRANSCRIPTION ERRORS (SAME LANGUAGE ONLY)
             - Keep the EXACT SAME language as the input
-            - Only fix obvious typos (e.g., "auframen" → "aufräumen")
+            - Only fix obvious typos in the same language
             - DO NOT TRANSLATE to any other language
-            - If text is in German, keep it German
-            - If text is in English, keep it English
+            - Preserve the original language completely
 
             STEP 2: CREATE TASK IN THE SAME LANGUAGE AS INPUT
             
             🚨 CRITICAL LANGUAGE RULES - READ CAREFULLY 🚨
             
-            LANGUAGE PRIORITY: GERMAN and ENGLISH (detect which one the user is using)
+            SUPPORTED LANGUAGES (PRIMARY PRIORITY):
+            - Turkish (Türkçe)
+            - English
+            - German (Deutsch)
             
-            DETECTION RULES:
-            1. Check if the input contains German words (ich, mich, zimmer, aufräumen, morgen, heute, etc.)
-               → If YES, the PRIMARY language is GERMAN
-            2. Check if the input contains English words (remind, tomorrow, today, meeting, call, etc.)
-               → If YES and no German words, the PRIMARY language is ENGLISH
-            3. For mixed inputs, count which language has MORE words
+            
+            SUPPORTED LANGUAGES (SECONDARY PRIORITY):
+            - Arabic (العربية)
+            - Urdu (اردو)
+            
+            ALL OTHER LANGUAGES: Also supported - preserve them as-is
+            
+            LANGUAGE DETECTION RULES:
+            1. Detect the PRIMARY language of the user's input by identifying key words
+            2. For mixed inputs, use the language that appears MOST in the text
+            3. Common indicators:
+               - Turkish: ben, bana, yarın, bugün, oda, toplantı, ara, etc.
+               - English: I, me, tomorrow, today, room, meeting, call, etc.
+               - German: ich, mich, morgen, heute, zimmer, besprechung, anrufen, etc.
+               - Urdu: میں، مجھے، کل، آج، کمرہ، میٹنگ، etc.
+               - Arabic: أنا، لي، غدا، اليوم، غرفة، اجتماع، etc.
             
             🔴 MANDATORY: Title and Description MUST be in the PRIMARY language 🔴
             
-            EXAMPLES:
+            EXAMPLES FOR DIFFERENT LANGUAGES:
+            
+            ✅ CORRECT Turkish Task:
+            Input: "odayı temizle"
+            Output: {{
+                "title": "Odayı temizle",
+                "description": "Odayı temizle ve düzenle",
+                ...
+            }}
+            
+            ✅ CORRECT Turkish Task with Time:
+            Input: "yarın doktoru ara"
+            Output: {{
+                "title": "Doktoru ara",
+                "description": "Doktor ile görüşme için telefon et",
+                ...
+            }}
+            
+            ✅ CORRECT Urdu Task:
+            Input: "کمرہ صاف کرو"
+            Output: {{
+                "title": "کمرہ صاف کرو",
+                "description": "کمرہ صاف اور منظم کریں",
+                ...
+            }}
             
             ✅ CORRECT German Task:
             Input: "zimmer aufräumen"
             Output: {{
                 "title": "Zimmer aufräumen",
                 "description": "Das Zimmer aufräumen und ordnen",
-                ...
-            }}
-            
-            ❌ WRONG (NEVER DO THIS):
-            Input: "zimmer aufräumen"
-            Output: {{
-                "title": "Room tidying",  ← WRONG! This is translated!
-                "description": "Tidying up the room",  ← WRONG! This is translated!
                 ...
             }}
             
@@ -91,29 +119,44 @@ class VoiceAssistantService:
                 ...
             }}
             
-            ✅ CORRECT Mixed Language (German primary):
-            Input: "ich muss ein meeting vorbereiten"
+            ✅ CORRECT Arabic Task:
+            Input: "نظف الغرفة"
             Output: {{
-                "title": "Meeting vorbereiten",
-                "description": "Ein Meeting vorbereiten und planen",
+                "title": "نظف الغرفة",
+                "description": "تنظيف وترتيب الغرفة",
                 ...
             }}
             
-            🔴 IF INPUT IS GERMAN → KEEP EVERYTHING GERMAN 🔴
-            🔴 IF INPUT IS ENGLISH → KEEP EVERYTHING ENGLISH 🔴
+            ❌ WRONG (NEVER DO THIS):
+            Input: "odayı temizle" (Turkish)
+            Output: {{
+                "title": "Clean the room",  ← WRONG! This is translated to English!
+                "description": "Clean and organize the room",  ← WRONG!
+                ...
+            }}
+            
+            🔴 PRESERVE THE ORIGINAL LANGUAGE IN TITLE AND DESCRIPTION 🔴
             
             FIELD INSTRUCTIONS:
             - title: Task title in PRIMARY language (NO TRANSLATION!)
-                    * Remove temporal words like "tomorrow", "morgen", "today", "heute"
-                    * Example: "zimmer aufräumen morgen" → title: "Zimmer aufräumen"
+                    * Remove temporal words in ANY language:
+                      - English: "tomorrow", "today"
+                      - German: "morgen", "heute"
+                      - Turkish: "yarın", "bugün"
+                      - Urdu: "کل", "آج"
+                      - Arabic: "غدا", "اليوم"
+                    * Example: "odayı yarın temizle" → title: "Odayı temizle"
             - description: Detailed description in PRIMARY language (NO TRANSLATION!)
-                         * Example for German: "Das Zimmer aufräumen und in Ordnung bringen"
-                         * Example for English: "Clean and organize the room"
+                         * Turkish example: "Odayı temizle ve düzenle"
+                         * German example: "Das Zimmer aufräumen und in Ordnung bringen"
+                         * English example: "Clean and organize the room"
+                         * Urdu example: "کمرہ صاف اور منظم کریں"
+                         * Arabic example: "تنظيف وترتيب الغرفة"
             - priority: "high", "medium", or "low" (English)
-            - date: YYYY-MM-DD format:
-              * "tomorrow"/"morgen" = {tomorrow_date.strftime('%Y-%m-%d')}
-              * "today"/"heute" = {current_date.strftime('%Y-%m-%d')}
-              * "next week"/"nächste woche" = +7 days
+            - date: YYYY-MM-DD format - detect temporal keywords in ANY language:
+              * Tomorrow words: "tomorrow", "morgen", "yarın", "کل", "غدا" = {tomorrow_date.strftime('%Y-%m-%d')}
+              * Today words: "today", "heute", "bugün", "آج", "اليوم" = {current_date.strftime('%Y-%m-%d')}
+              * Next week words: "next week", "nächste woche", "gelecek hafta" = +7 days
               * If no date mentioned, use null
             - time: HH:MM format (24-hour). If no specific time, use null
             - category: Task category in English (work, personal, health, shopping, meeting, reminder)
@@ -127,6 +170,30 @@ class VoiceAssistantService:
             
             Respond with ONLY a JSON object.
             
+            Turkish Input Example:
+            Input: "odayı temizle"
+            {{
+                "title": "Odayı temizle",
+                "description": "Odayı temizle ve düzenle",
+                "priority": "medium",
+                "date": null,
+                "time": null,
+                "category": "personal",
+                "tags": ["room", "cleaning"]
+            }}
+            
+            Turkish Input with Date:
+            Input: "yarın doktoru ara"
+            {{
+                "title": "Doktoru ara",
+                "description": "Doktor ile görüşme için telefon et",
+                "priority": "medium",
+                "date": "{tomorrow_date.strftime('%Y-%m-%d')}",
+                "time": null,
+                "category": "health",
+                "tags": ["call", "doctor"]
+            }}
+            
             German Input Example:
             Input: "zimmer aufräumen"
             {{
@@ -137,18 +204,6 @@ class VoiceAssistantService:
                 "time": null,
                 "category": "personal",
                 "tags": ["room", "cleaning"]
-            }}
-            
-            German Input with Context:
-            Input: "Ich muss die bank über die neue transaktion informieren"
-            {{
-                "title": "Bank über neue Transaktion informieren",
-                "description": "Die Bank über die neue Transaktion informieren",
-                "priority": "medium",
-                "date": null,
-                "time": null,
-                "category": "work",
-                "tags": ["bank", "transaction"]
             }}
             
             English Input Example:
@@ -162,12 +217,24 @@ class VoiceAssistantService:
                 "category": "health",
                 "tags": ["call", "doctor", "appointment"]
             }}
+            
+            Urdu Input Example:
+            Input: "کل ڈاکٹر کو فون کریں"
+            {{
+                "title": "ڈاکٹر کو فون کریں",
+                "description": "ڈاکٹر سے ملاقات کے لیے فون کریں",
+                "priority": "medium",
+                "date": "{tomorrow_date.strftime('%Y-%m-%d')}",
+                "time": null,
+                "category": "health",
+                "tags": ["call", "doctor"]
+            }}
             """
 
             response = self.client.chat.completions.create(
                 model="gpt-4-turbo",
                 messages=[
-                    {"role": "system", "content": "You are a multilingual task extraction assistant. You MUST preserve the original language of the user's input. NEVER translate German to English or English to German. Extract task information while keeping title and description in the same language as the input."},
+                    {"role": "system", "content": "You are a multilingual task extraction assistant supporting Turkish, English, German, Urdu, Arabic, and all other languages. You MUST preserve the original language of the user's input. NEVER translate the task title or description. Extract task information while keeping title and description in the exact same language as the input."},
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.1
