@@ -87,21 +87,6 @@ class VoiceAssistantService:
                 ...
             }}
             
-            ✅ CORRECT Turkish Task with Time:
-            Input: "yarın doktoru ara"
-            Output: {{
-                "title": "Doktoru ara",
-                "description": "Doktor ile görüşme için telefon et",
-                ...
-            }}
-            
-            ✅ CORRECT Urdu Task:
-            Input: "کمرہ صاف کرو"
-            Output: {{
-                "title": "کمرہ صاف کرو",
-                "description": "کمرہ صاف اور منظم کریں",
-                ...
-            }}
             
             ✅ CORRECT German Task:
             Input: "zimmer aufräumen"
@@ -182,17 +167,6 @@ class VoiceAssistantService:
                 "tags": ["room", "cleaning"]
             }}
             
-            Turkish Input with Date:
-            Input: "yarın doktoru ara"
-            {{
-                "title": "Doktoru ara",
-                "description": "Doktor ile görüşme için telefon et",
-                "priority": "medium",
-                "date": "{tomorrow_date.strftime('%Y-%m-%d')}",
-                "time": null,
-                "category": "health",
-                "tags": ["call", "doctor"]
-            }}
             
             German Input Example:
             Input: "zimmer aufräumen"
@@ -218,17 +192,6 @@ class VoiceAssistantService:
                 "tags": ["call", "doctor", "appointment"]
             }}
             
-            Urdu Input Example:
-            Input: "کل ڈاکٹر کو فون کریں"
-            {{
-                "title": "ڈاکٹر کو فون کریں",
-                "description": "ڈاکٹر سے ملاقات کے لیے فون کریں",
-                "priority": "medium",
-                "date": "{tomorrow_date.strftime('%Y-%m-%d')}",
-                "time": null,
-                "category": "health",
-                "tags": ["call", "doctor"]
-            }}
             """
 
             response = self.client.chat.completions.create(
